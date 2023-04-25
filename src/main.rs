@@ -35,16 +35,26 @@ fn main() {
             .prompt()
             .expect("Failed to select a project")
     };
-    let command = if args.open {
-        editor_command
-    } else {
-        "cd".to_string()
-    };
+    let project_full_path = format!("{}/{}", workspace_root, project);
 
-    Command::new(&command)
-        .arg(format!("{}/{}", workspace_root, project))
-        .output()
-        .expect(&format!("Failed to run command {command}"));
+    if args.open {
+        Command::new(&editor_command)
+            .arg(&project_full_path)
+            .spawn()
+            .expect(&format!("Failed to run editor command {editor_command}"))
+            .wait()
+            .expect("Editor command returned a non-zero status");
+    } else {
+        let shell = env::var("SHELL").expect("Couldn't determine shell");
+
+        Command::new(&shell)
+            .current_dir(&project_full_path)
+            .arg("-i")
+            .spawn()
+            .expect(&format!("Failed to run shell command {shell}"))
+            .wait()
+            .expect("Shell command returned a non-zero status");
+    };
 }
 
 fn get_editor_command() -> Result<String, impl Error> {
