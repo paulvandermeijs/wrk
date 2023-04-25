@@ -23,7 +23,7 @@ fn main() {
         "".to_string()
     };
     let workspace_root = get_workspace_root().expect("Unable to determine workspace root");
-    let projects = get_projects(&workspace_root)
+    let mut projects = get_projects(&workspace_root)
         .expect(&format!("Could not read projects from {workspace_root}"));
     let project = if let Some(project) = &args.project {
         projects
@@ -31,6 +31,8 @@ fn main() {
             .find(|v| v.to_lowercase() == project.to_lowercase())
             .expect(&format!("Couldn't find project {project}"))
     } else {
+        projects.sort();
+
         Select::new("Select a project", projects)
             .prompt()
             .expect("Failed to select a project")
