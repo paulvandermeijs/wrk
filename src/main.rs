@@ -9,15 +9,26 @@ struct Args {
     /// Select a project
     project: Option<String>,
 
+    #[command(flatten)]
+    action: Action,
+}
+
+#[derive(clap::Args, Debug)]
+#[group(multiple = false)]
+struct Action {
     /// Open the project
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     open: bool,
+
+    /// Execute a command
+    #[arg(short = 'x', long, value_name = "COMMAND")]
+    execute: Option<String>,
 }
 
 fn main() {
     let args = Args::parse();
 
-    let editor_command = if args.open {
+    let editor_command = if args.action.open {
         get_editor_command().expect("No editor configured")
     } else {
         "".to_string()
@@ -39,13 +50,23 @@ fn main() {
     };
     let project_full_path = format!("{}/{}", workspace_root, project);
 
-    if args.open {
+    if args.action.open {
         Command::new(&editor_command)
             .arg(&project_full_path)
             .spawn()
             .expect(&format!("Failed to run editor command {editor_command}"))
             .wait()
             .expect("Editor command returned a non-zero status");
+    } else if let Some(execute_command) = args.action.execute {
+        let shell = env::var("SHELL").expect("Couldn't determine shell");
+
+        Command::new(&shell)
+            .current_dir(&project_full_path)
+            .args(["-c", &execute_command])
+            .spawn()
+            .expect(&format!("Failed to run execute command {execute_command}"))
+            .wait()
+            .expect("Execute command returned a non-zero status");
     } else {
         let shell = env::var("SHELL").expect("Couldn't determine shell");
 
